@@ -56,48 +56,6 @@ void uacpi_kernel_pci_device_close(uacpi_handle handle)
     gBS->FreePool(handle);
 }
 
-uacpi_status uacpi_kernel_pci_read8(uacpi_handle device, uacpi_size offset, uacpi_u8 *value)
-{
-    uacpi_pci_address *address = (uacpi_pci_address *)device;
-    *value = pciConfigReadByte(address->bus, address->device, address->function, offset);
-    return UACPI_STATUS_OK;
-}
-
-uacpi_status uacpi_kernel_pci_read16(uacpi_handle device, uacpi_size offset, uacpi_u16 *value)
-{
-    uacpi_pci_address *address = (uacpi_pci_address *)device;
-    *value = pciConfigReadWord(address->bus, address->device, address->function, offset);
-    return UACPI_STATUS_OK;
-}
-
-uacpi_status uacpi_kernel_pci_read32(uacpi_handle device, uacpi_size offset, uacpi_u32 *value)
-{
-    uacpi_pci_address *address = (uacpi_pci_address *)device;
-    *value = pciConfigReadDWord(address->bus, address->device, address->function, offset);
-    return UACPI_STATUS_OK;
-}
-
-uacpi_status uacpi_kernel_pci_write8(uacpi_handle device, uacpi_size offset, uacpi_u8 value)
-{
-    uacpi_pci_address *address = (uacpi_pci_address *)device;
-    pciConfigWriteByte(address->bus, address->device, address->function, offset, value);
-    return UACPI_STATUS_OK;
-}
-
-uacpi_status uacpi_kernel_pci_write16(uacpi_handle device, uacpi_size offset, uacpi_u16 value)
-{
-    uacpi_pci_address *address = (uacpi_pci_address *)device;
-    pciConfigWriteWord(address->bus, address->device, address->function, offset, value);
-    return UACPI_STATUS_OK;
-}
-
-uacpi_status uacpi_kernel_pci_write32(uacpi_handle device, uacpi_size offset, uacpi_u32 value)
-{
-    uacpi_pci_address *address = (uacpi_pci_address *)device;
-    pciConfigWriteDWord(address->bus, address->device, address->function, offset, value);
-    return UACPI_STATUS_OK;
-}
-
 struct mapped_io
 {
     uacpi_io_addr base;
