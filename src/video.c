@@ -571,6 +571,18 @@ EFI_STATUS csmwrap_video_prepare_exitbs(struct csmwrap_priv *priv)
     return EFI_SUCCESS;
 }
 
+void csmwrap_video_early_init(struct csmwrap_priv *priv) {
+    if (FindGopPciDevice(priv) != EFI_SUCCESS) {
+        priv->cb_fb.physical_address = 0;
+        return;
+    }
+
+    if (csmwrap_video_seavgabios_init(priv) != EFI_SUCCESS) {
+        priv->cb_fb.physical_address = 0;
+        return;
+    }
+}
+
 EFI_STATUS csmwrap_video_init(struct csmwrap_priv *priv)
 {
     EFI_STATUS status;
