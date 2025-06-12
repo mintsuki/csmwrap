@@ -82,6 +82,7 @@ override CFLAGS += \
 override CPPFLAGS := \
     -I src \
     -I nyu-efi/inc \
+    -I flanterm/src \
     -I uACPI/include \
     -DUACPI_OVERRIDE_CONFIG \
     -DBUILD_VERSION=\"$(BUILD_VERSION)\" \
@@ -140,7 +141,7 @@ override LDFLAGS += \
 
 # Use "find" to glob all *.c, *.S, and *.asm{32,64} files in the tree and obtain the
 # object and header dependency file names.
-override SRCFILES := $(shell find -L src cc-runtime/src nyu-efi/$(ARCH) uACPI/source -type f | LC_ALL=C sort)
+override SRCFILES := $(shell find -L src cc-runtime/src nyu-efi/$(ARCH) flanterm/src uACPI/source -type f | LC_ALL=C sort)
 override CFILES := $(filter %.c,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))
 ifeq ($(ARCH),ia32)

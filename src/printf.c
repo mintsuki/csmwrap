@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdarg.h>
 
 #define NANOPRINTF_IMPLEMENTATION
@@ -10,8 +11,10 @@
 #define NANOPRINTF_USE_WRITEBACK_FORMAT_SPECIFIERS 1
 #include <nanoprintf.h>
 
-#include <efi.h>
-#include <csmwrap.h>
+#include <flanterm.h>
+#include <flanterm_backends/fb.h>
+
+struct flanterm_context *flanterm_ctx = NULL;
 
 static void _putchar(int character, void *extra_arg) {
     (void)extra_arg;
@@ -20,16 +23,9 @@ static void _putchar(int character, void *extra_arg) {
         _putchar('\r', NULL);
     }
 
-    CHAR16 string[2];
-    string[0] = character;
-    string[1] = 0;
-
-    if (!gST->ConOut || !gST->ConOut->OutputString) {
-        /* No console output available */
-        return;
+    if (flanterm_ctx != NULL) {
+        flanterm_write(flanterm_ctx, (const char *)&character, 1);
     }
-
-    gST->ConOut->OutputString(gST->ConOut, string);
 }
 
 int printf(const char *restrict fmt, ...) {
