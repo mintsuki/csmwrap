@@ -406,6 +406,8 @@ bool acpi_init(struct csmwrap_priv *priv) {
     return false;
 }
 
+static bool fully_initialized = false;
+
 bool acpi_full_init(void) {
     enum uacpi_status uacpi_status;
 
@@ -432,11 +434,15 @@ bool acpi_full_init(void) {
         early_table_buffer = NULL;
     }
 
+    fully_initialized = true;
+
     return true;
 }
 
 void acpi_prepare_exitbs(void) {
-    uacpi_state_reset();
+    if (fully_initialized) {
+        uacpi_state_reset();
+    }
 
     if (early_table_buffer != NULL) {
         gBS->FreePool(early_table_buffer);
