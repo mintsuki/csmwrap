@@ -28,9 +28,16 @@ else
     CC := cc
 endif
 
+# User controllable linker command.
+LD := $(CROSS_PREFIX)ld
+
 # User controllable objcopy command.
 OBJCOPY := $(CROSS_PREFIX)objcopy
+
+# User controllable objdump command.
 OBJDUMP := $(CROSS_PREFIX)objdump
+
+# User controllable strip command.
 STRIP := $(CROSS_PREFIX)strip
 
 # User controllable C flags.
@@ -66,6 +73,7 @@ override CFLAGS += \
     -fno-stack-protector \
     -fno-stack-check \
     -fshort-wchar \
+    -fno-lto \
     -fPIE \
     -ffunction-sections \
     -fdata-sections
@@ -98,7 +106,7 @@ ifeq ($(ARCH),ia32)
         -mno-80387 \
         -mno-mmx
     override LDFLAGS += \
-        -Wl,-m,elf_i386
+        -m elf_i386
     override NASMFLAGS += \
         -f elf32
 endif
@@ -116,25 +124,23 @@ ifeq ($(ARCH),x86_64)
         -mno-sse2 \
         -mno-red-zone
     override LDFLAGS += \
-        -Wl,-m,elf_x86_64
+        -m elf_x86_64
     override NASMFLAGS += \
         -f elf64
 endif
 
 # Internal linker flags that should not be changed by the user.
 override LDFLAGS += \
-    -Wl,--build-id=none \
     -nostdlib \
     -pie \
     -z text \
     -z max-page-size=0x1000 \
-    -Wl,--gc-sections \
-    -Wl,-z,execstack \
+    -gc-sections \
     -T nyu-efi/$(ARCH)/link_script.lds
 
 # Use "find" to glob all *.c, *.S, and *.asm{32,64} files in the tree and obtain the
 # object and header dependency file names.
-override SRCFILES := $(shell find -L src cc-runtime/src nyu-efi/$(ARCH) uACPI/source uACPI/include -type f | LC_ALL=C sort)
+override SRCFILES := $(shell find -L src cc-runtime/src nyu-efi/$(ARCH) uACPI/source -type f | LC_ALL=C sort)
 override CFILES := $(filter %.c,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))
 ifeq ($(ARCH),ia32)
@@ -171,7 +177,7 @@ bin-$(ARCH)/$(OUTPUT).efi: bin-$(ARCH)/$(OUTPUT) GNUmakefile
 # Link rules for the final executable.
 bin-$(ARCH)/$(OUTPUT): GNUmakefile nyu-efi/$(ARCH)/link_script.lds $(OBJ)
 	mkdir -p "$$(dirname $@)"
-	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJ) -o $@
+	$(LD) $(OBJ) $(LDFLAGS) -o $@
 
 # Compilation rules for *.c files.
 obj-$(ARCH)/%.c.o: %.c GNUmakefile
@@ -248,6 +254,7 @@ seabios:
 	cp seabios-config seabios/.config
 	$(MAKE) -C seabios olddefconfig \
 		CC="$(CC)" \
+		LD="$(LD)" \
 		OBJCOPY="$(OBJCOPY)" \
 		OBJDUMP="$(OBJDUMP)" \
 		STRIP="$(STRIP)" \
@@ -257,10 +264,10 @@ seabios:
 		EXTRAVERSION=\"$(SEABIOS_EXTRAVERSION)\"
 	$(MAKE) -C seabios \
 		CC="$(CC)" \
+		LD="$(LD)" \
 		OBJCOPY="$(OBJCOPY)" \
 		OBJDUMP="$(OBJDUMP)" \
 		STRIP="$(STRIP)" \
-		OBJCOPY="$(OBJCOPY)" \
 		CFLAGS="$(USER_CFLAGS)" \
 		CPPFLAGS="$(USER_CPPFLAGS)" \
 		LDFLAGS="$(USER_LDFLAGS)" \
