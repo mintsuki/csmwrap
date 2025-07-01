@@ -2,5 +2,6 @@
 /.cache
 /boot
 /ovmf
+/src/bins
 /bin-*
 /obj-*

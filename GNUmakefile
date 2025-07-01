@@ -160,10 +160,14 @@ override HEADER_DEPS := $(addprefix obj-$(ARCH)/,$(CFILES:.c=.c.d) $(ASFILES:.S=
 
 # Default target. This must come first, before header dependencies.
 .PHONY: all
-all: bin-$(ARCH)/$(OUTPUT).efi
+all:
+	$(MAKE) seabios
+	$(MAKE) bin-$(ARCH)/$(OUTPUT).efi
 
 # Include header dependencies.
 -include $(HEADER_DEPS)
+
+obj-$(ARCH)/src/csmwrap.c.o: src/bins/Csm16.h src/bins/vgabios.h
 
 obj-$(ARCH)/src/printf.c.o: override CPPFLAGS += \
     -I nanoprintf
@@ -238,19 +242,41 @@ endif
 
 # Remove object files and the final executable.
 .PHONY: clean
-clean:
+clean: seabios/.config
+	$(MAKE) -C seabios clean
 	rm -rf bin-$(ARCH) obj-$(ARCH)
 
 # Remove everything built and generated including downloaded dependencies.
 .PHONY: distclean
-distclean:
+distclean: seabios/.config
+	$(MAKE) -C seabios distclean
+	rm -rf src/bins
 	rm -rf bin-* obj-* ovmf
 
 # SeaBIOS build target.
 SEABIOS_EXTRAVERSION := -CSMWrap-$(BUILD_VERSION)
 .PHONY: seabios
-seabios:
-	$(MAKE) -C seabios distclean
+seabios: seabios/.config
+	$(MAKE) -C seabios \
+		CC="$(CC)" \
+		LD="$(LD)" \
+		OBJCOPY="$(OBJCOPY)" \
+		OBJDUMP="$(OBJDUMP)" \
+		STRIP="$(STRIP)" \
+		CFLAGS="$(USER_CFLAGS)" \
+		CPPFLAGS="$(USER_CPPFLAGS)" \
+		LDFLAGS="$(USER_LDFLAGS)" \
+		EXTRAVERSION=\"$(SEABIOS_EXTRAVERSION)\"
+
+src/bins/Csm16.h: seabios/out/Csm16.bin
+	mkdir -p src/bins
+	cd seabios/out && xxd -i Csm16.bin >../../src/bins/Csm16.h
+
+src/bins/vgabios.h: seabios/out/vgabios.bin
+	mkdir -p src/bins
+	cd seabios/out && xxd -i vgabios.bin >../../src/bins/vgabios.h
+
+seabios/.config:
 	cp seabios-config seabios/.config
 	$(MAKE) -C seabios olddefconfig \
 		CC="$(CC)" \
@@ -262,15 +288,3 @@ seabios:
 		CPPFLAGS="$(USER_CPPFLAGS)" \
 		LDFLAGS="$(USER_LDFLAGS)" \
 		EXTRAVERSION=\"$(SEABIOS_EXTRAVERSION)\"
-	$(MAKE) -C seabios \
-		CC="$(CC)" \
-		LD="$(LD)" \
-		OBJCOPY="$(OBJCOPY)" \
-		OBJDUMP="$(OBJDUMP)" \
-		STRIP="$(STRIP)" \
-		CFLAGS="$(USER_CFLAGS)" \
-		CPPFLAGS="$(USER_CPPFLAGS)" \
-		LDFLAGS="$(USER_LDFLAGS)" \
-		EXTRAVERSION=\"$(SEABIOS_EXTRAVERSION)\"
-	cd seabios/out && xxd -i Csm16.bin >../../src/bins/Csm16.h
-	cd seabios/out && xxd -i vgabios.bin >../../src/bins/vgabios.h
