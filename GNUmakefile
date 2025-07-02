@@ -167,7 +167,9 @@ all:
 # Include header dependencies.
 -include $(HEADER_DEPS)
 
-obj-$(ARCH)/src/csmwrap.c.o: src/bins/Csm16.h src/bins/vgabios.h
+obj-$(ARCH)/src/csmwrap.c.o: src/bins/Csm16.h
+
+obj-$(ARCH)/src/video.c.o: src/bins/vgabios.h
 
 obj-$(ARCH)/src/printf.c.o: override CPPFLAGS += \
     -I nanoprintf
@@ -253,7 +255,7 @@ distclean: seabios/.config
 	rm -rf src/bins
 	rm -rf bin-* obj-* ovmf
 
-# SeaBIOS build target.
+# SeaBIOS build targets.
 SEABIOS_EXTRAVERSION := -CSMWrap-$(BUILD_VERSION)
 .PHONY: seabios
 seabios: seabios/.config
@@ -276,7 +278,7 @@ src/bins/vgabios.h: seabios/out/vgabios.bin
 	mkdir -p src/bins
 	cd seabios/out && xxd -i vgabios.bin >../../src/bins/vgabios.h
 
-seabios/.config:
+seabios/.config: seabios-config
 	cp seabios-config seabios/.config
 	$(MAKE) -C seabios olddefconfig \
 		CC="$(CC)" \
