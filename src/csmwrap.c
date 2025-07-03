@@ -105,6 +105,39 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
     printf("%s", banner);
 
+    EFI_GUID loaded_image_guid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
+    EFI_LOADED_IMAGE_PROTOCOL *loaded_image = NULL;
+    if (gBS->HandleProtocol(ImageHandle, &loaded_image_guid, (void **)&loaded_image) != EFI_SUCCESS) {
+        loaded_image = NULL;
+    }
+
+    EFI_GUID sfs_protocol_guid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
+    EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *sfs_protocol = NULL;
+    if (loaded_image == NULL || gBS->HandleProtocol(loaded_image->DeviceHandle, &sfs_protocol_guid, (void **)&sfs_protocol) != EFI_SUCCESS) {
+        sfs_protocol = NULL;
+    }
+
+    EFI_FILE_PROTOCOL *sfs_dir = NULL;
+    if (sfs_protocol == NULL || sfs_protocol->OpenVolume(sfs_protocol, &sfs_dir) != EFI_SUCCESS) {
+        sfs_dir = NULL;
+    }
+
+    EFI_FILE_PROTOCOL *vgabios_file_handle = NULL;
+    if (sfs_dir != NULL) {
+        if (sfs_dir->Open(sfs_dir, &vgabios_file_handle, L"\\EFI\\BOOT\\vgabios.bin", EFI_FILE_MODE_READ, 0) == EFI_SUCCESS) {
+            printf("Found 'vgabios.bin' file. Using it as our VBIOS!\n");
+            UINTN max_size = 256 * 1024;
+            if (gBS->AllocatePool(EfiLoaderData, max_size, &vbios_loc) == EFI_SUCCESS
+             && vgabios_file_handle->Read(vgabios_file_handle, &max_size, vbios_loc) == EFI_SUCCESS) {
+                vbios_size = max_size;
+            } else {
+                vbios_loc = NULL;
+                vbios_size = 0;
+            }
+        }
+        sfs_dir->Close(sfs_dir);
+    }
+
     gBS->RaiseTPL(TPL_NOTIFY);
     gBS->SetWatchdogTimer(0, 0, 0, NULL);
 
