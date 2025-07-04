@@ -126,16 +126,20 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
     EFI_FILE_PROTOCOL *vgabios_file_handle = NULL;
     if (sfs_dir != NULL) {
-        if (sfs_dir->Open(sfs_dir, &vgabios_file_handle, L"\\EFI\\BOOT\\vgabios.bin", EFI_FILE_MODE_READ, 0) == EFI_SUCCESS) {
-            printf("Found 'vgabios.bin' file. Using it as our VBIOS!\n");
+        if (sfs_dir->Open(sfs_dir, &vgabios_file_handle, L"\\EFI\\CSMWrap\\vgabios.bin", EFI_FILE_MODE_READ, 0) == EFI_SUCCESS) {
             UINTN max_size = 256 * 1024;
-            if (gBS->AllocatePool(EfiLoaderData, max_size, &vbios_loc) == EFI_SUCCESS
-             && vgabios_file_handle->Read(vgabios_file_handle, &max_size, vbios_loc) == EFI_SUCCESS) {
-                vbios_size = max_size;
-            } else {
+            if (gBS->AllocatePool(EfiLoaderData, max_size, &vbios_loc) != EFI_SUCCESS) {
                 vbios_loc = NULL;
-                vbios_size = 0;
+            } else {
+                if (vgabios_file_handle->Read(vgabios_file_handle, &max_size, vbios_loc) == EFI_SUCCESS) {
+                    printf("Found and loaded '\\EFI\\CSMWrap\\vgabios.bin' file. Using it as our VBIOS!\n");
+                    vbios_size = max_size;
+                } else {
+                    gBS->FreePool(vbios_loc);
+                    vbios_loc = NULL;
+                }
             }
+            vgabios_file_handle->Close(vgabios_file_handle);
         }
         sfs_dir->Close(sfs_dir);
     }
