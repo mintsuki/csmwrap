@@ -98,12 +98,14 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     gBS = SystemTable->BootServices;
     gRT = SystemTable->RuntimeServices;
 
+    gBS->SetWatchdogTimer(0, 0, 0, NULL);
+
+    printf("%s", banner);
+
     if (gRT->GetTime(&gTimeAtBoot, NULL) != EFI_SUCCESS) {
         printf("Failed to query current time\n");
         return -1;
     }
-
-    printf("%s", banner);
 
     EFI_GUID loaded_image_guid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
     EFI_LOADED_IMAGE_PROTOCOL *loaded_image = NULL;
@@ -139,7 +141,6 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     }
 
     gBS->RaiseTPL(TPL_NOTIFY);
-    gBS->SetWatchdogTimer(0, 0, 0, NULL);
 
     if (unlock_bios_region()) {
         printf("Unable to unlock BIOS region\n");
