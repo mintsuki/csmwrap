@@ -270,15 +270,15 @@ seabios: seabios/.config
 		LDFLAGS="$(USER_LDFLAGS)" \
 		EXTRAVERSION=\"$(SEABIOS_EXTRAVERSION)\"
 
-src/bins/Csm16.h: seabios/out/Csm16.bin
+src/bins/Csm16.h: GNUmakefile seabios/out/Csm16.bin
 	mkdir -p src/bins
 	cd seabios/out && xxd -i Csm16.bin >../../src/bins/Csm16.h
 
-src/bins/vgabios.h: seabios/out/vgabios.bin
+src/bins/vgabios.h: GNUmakefile seabios/out/vgabios.bin
 	mkdir -p src/bins
 	cd seabios/out && xxd -i vgabios.bin >../../src/bins/vgabios.h
 
-seabios/.config: seabios-config
+seabios/.config: GNUmakefile seabios-config
 	cp seabios-config seabios/.config
 	$(MAKE) -C seabios olddefconfig \
 		CC="$(CC)" \
