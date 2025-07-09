@@ -9,6 +9,9 @@ override OUTPUT := csmwrap
 # Target architecture to build for. Default to x86_64.
 ARCH := x86_64
 
+# Install prefix; /usr/local is a good, standard default pick.
+PREFIX := /usr/local
+
 # Check if the architecture is supported.
 ifeq ($(filter $(ARCH),ia32 x86_64),)
     $(error Architecture $(ARCH) not supported)
@@ -17,28 +20,39 @@ endif
 # Default user QEMU flags. These are appended to the QEMU command calls.
 QEMUFLAGS := -m 2G
 
-# User controllable cross compiler prefix.
-CROSS_COMPILE :=
-CROSS_PREFIX := $(CROSS_COMPILE)
+# User controllable toolchain and toolchain prefix.
+TOOLCHAIN :=
+TOOLCHAIN_PREFIX :=
+ifneq ($(TOOLCHAIN),)
+    ifeq ($(TOOLCHAIN_PREFIX),)
+        TOOLCHAIN_PREFIX := $(TOOLCHAIN)-
+    endif
+endif
 
 # User controllable C compiler command.
-ifneq ($(CROSS_PREFIX),)
-    CC := $(CROSS_PREFIX)gcc
+ifneq ($(TOOLCHAIN_PREFIX),)
+    CC := $(TOOLCHAIN_PREFIX)gcc
 else
     CC := cc
 endif
 
 # User controllable linker command.
-LD := $(CROSS_PREFIX)ld
+LD := $(TOOLCHAIN_PREFIX)ld
 
 # User controllable objcopy command.
-OBJCOPY := $(CROSS_PREFIX)objcopy
+OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
 
 # User controllable objdump command.
-OBJDUMP := $(CROSS_PREFIX)objdump
+OBJDUMP := $(TOOLCHAIN_PREFIX)objdump
 
 # User controllable strip command.
-STRIP := $(CROSS_PREFIX)strip
+STRIP := $(TOOLCHAIN_PREFIX)strip
+
+# Defaults overrides for variables if using "llvm" as toolchain.
+ifeq ($(TOOLCHAIN),llvm)
+    CC := clang
+    LD := ld.lld
+endif
 
 # User controllable C flags.
 CFLAGS := -g -O2 -pipe
@@ -56,7 +70,7 @@ LDFLAGS :=
 BUILD_VERSION := $(shell git describe --tags --always 2>/dev/null || echo "Unknown")
 
 # Check if CC is Clang.
-override CC_IS_CLANG := $(shell ! $(CC) --version 2>/dev/null | grep 'clang' >/dev/null 2>&1; echo $$?)
+override CC_IS_CLANG := $(shell ! $(CC) --version 2>/dev/null | grep -q '^Target: '; echo $$?)
 
 # Save user CFLAGS, CPPFLAGS, and LDFLAGS before we append internal flags.
 override USER_CFLAGS := $(CFLAGS)
@@ -98,7 +112,7 @@ override NASMFLAGS += \
 ifeq ($(ARCH),ia32)
     ifeq ($(CC_IS_CLANG),1)
         override CC += \
-            -target i686-unknown-none
+            -target i686-unknown-none-elf
     endif
     override CFLAGS += \
         -m32 \
@@ -114,7 +128,7 @@ endif
 ifeq ($(ARCH),x86_64)
     ifeq ($(CC_IS_CLANG),1)
         override CC += \
-            -target x86_64-unknown-none
+            -target x86_64-unknown-none-elf
     endif
     override CFLAGS += \
         -m64 \
@@ -137,12 +151,12 @@ override LDFLAGS += \
     -pie \
     -z text \
     -z max-page-size=0x1000 \
-    -gc-sections \
+    --gc-sections \
     -T nyu-efi/$(ARCH)/link_script.lds
 
 # Use "find" to glob all *.c, *.S, and *.asm{32,64} files in the tree and obtain the
 # object and header dependency file names.
-override SRCFILES := $(shell find -L src cc-runtime/src nyu-efi/$(ARCH) uACPI/source -type f | LC_ALL=C sort)
+override SRCFILES := $(shell find -L src cc-runtime/src nyu-efi/$(ARCH) uACPI/source -type f 2>/dev/null | LC_ALL=C sort)
 override CFILES := $(filter %.c,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))
 ifeq ($(ARCH),ia32)
@@ -256,6 +270,18 @@ distclean: seabios/.config
 	$(MAKE) -C seabios distclean
 	rm -rf src/bins
 	rm -rf bin-* obj-* ovmf
+
+# Install the final built executable to its final on-root location.
+.PHONY: install
+install: all
+	install -d "$(DESTDIR)$(PREFIX)/share/$(OUTPUT)"
+	install -m 644 bin-$(ARCH)/$(OUTPUT).efi "$(DESTDIR)$(PREFIX)/share/$(OUTPUT)/$(OUTPUT)-$(ARCH).efi"
+
+# Try to undo whatever the "install" target did.
+.PHONY: uninstall
+uninstall:
+	rm -f "$(DESTDIR)$(PREFIX)/share/$(OUTPUT)/$(OUTPUT)-$(ARCH).efi"
+	-rmdir "$(DESTDIR)$(PREFIX)/share/$(OUTPUT)"
 
 # SeaBIOS build targets.
 SEABIOS_EXTRAVERSION := -CSMWrap-$(BUILD_VERSION)
