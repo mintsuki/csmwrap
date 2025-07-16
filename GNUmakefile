@@ -20,6 +20,9 @@ endif
 # Default user QEMU flags. These are appended to the QEMU command calls.
 QEMUFLAGS := -m 2G
 
+# User controllable host C compiler.
+HOST_CC := cc
+
 # User controllable toolchain and toolchain prefix.
 TOOLCHAIN :=
 TOOLCHAIN_PREFIX :=
@@ -77,6 +80,20 @@ override USER_CFLAGS := $(CFLAGS)
 override USER_CPPFLAGS := $(CPPFLAGS)
 override USER_LDFLAGS := $(LDFLAGS)
 
+override define SEABIOS_CALL =
+	$(MAKE) -C seabios $(1) \
+		HOSTCC="$(HOST_CC)" \
+		CC="$(CC)" \
+		LD="$(LD)" \
+		OBJCOPY="$(OBJCOPY)" \
+		OBJDUMP="$(OBJDUMP)" \
+		STRIP="$(STRIP)" \
+		CFLAGS="$(USER_CFLAGS)" \
+		CPPFLAGS="$(USER_CPPFLAGS)" \
+		LDFLAGS="$(USER_LDFLAGS)" \
+		EXTRAVERSION=\"$(SEABIOS_EXTRAVERSION)\"
+endef
+
 # Internal C flags that should not be changed by the user.
 override CFLAGS += \
     -Wall \
@@ -99,7 +116,7 @@ override CPPFLAGS := \
     -I uACPI/include \
     -DUACPI_OVERRIDE_CONFIG \
     -DBUILD_VERSION=\"$(BUILD_VERSION)\" \
-    -isystem freestnd-c-hdrs \
+    -isystem freestnd-c-hdrs/include \
     $(CPPFLAGS) \
     -MMD \
     -MP
@@ -261,13 +278,13 @@ endif
 # Remove object files and the final executable.
 .PHONY: clean
 clean: seabios/.config
-	$(MAKE) -C seabios clean
+	$(call SEABIOS_CALL,clean)
 	rm -rf bin-$(ARCH) obj-$(ARCH)
 
 # Remove everything built and generated including downloaded dependencies.
 .PHONY: distclean
 distclean: seabios/.config
-	$(MAKE) -C seabios distclean
+	$(call SEABIOS_CALL,distclean)
 	rm -rf src/bins
 	rm -rf bin-* obj-* ovmf
 
@@ -287,16 +304,7 @@ uninstall:
 SEABIOS_EXTRAVERSION := -CSMWrap-$(BUILD_VERSION)
 .PHONY: seabios
 seabios: seabios/.config
-	$(MAKE) -C seabios \
-		CC="$(CC)" \
-		LD="$(LD)" \
-		OBJCOPY="$(OBJCOPY)" \
-		OBJDUMP="$(OBJDUMP)" \
-		STRIP="$(STRIP)" \
-		CFLAGS="$(USER_CFLAGS)" \
-		CPPFLAGS="$(USER_CPPFLAGS)" \
-		LDFLAGS="$(USER_LDFLAGS)" \
-		EXTRAVERSION=\"$(SEABIOS_EXTRAVERSION)\"
+	$(call SEABIOS_CALL,)
 
 src/bins/Csm16.h: GNUmakefile seabios/out/Csm16.bin
 	mkdir -p src/bins
@@ -308,13 +316,4 @@ src/bins/vgabios.h: GNUmakefile seabios/out/vgabios.bin
 
 seabios/.config: GNUmakefile seabios-config
 	cp seabios-config seabios/.config
-	$(MAKE) -C seabios olddefconfig \
-		CC="$(CC)" \
-		LD="$(LD)" \
-		OBJCOPY="$(OBJCOPY)" \
-		OBJDUMP="$(OBJDUMP)" \
-		STRIP="$(STRIP)" \
-		CFLAGS="$(USER_CFLAGS)" \
-		CPPFLAGS="$(USER_CPPFLAGS)" \
-		LDFLAGS="$(USER_LDFLAGS)" \
-		EXTRAVERSION=\"$(SEABIOS_EXTRAVERSION)\"
+	$(call SEABIOS_CALL,olddefconfig)
