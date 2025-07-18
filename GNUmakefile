@@ -80,7 +80,7 @@ override USER_CFLAGS := $(CFLAGS)
 override USER_CPPFLAGS := $(CPPFLAGS)
 override USER_LDFLAGS := $(LDFLAGS)
 
-override define SEABIOS_CALL =
+override define SEABIOS_CALL
 	$(MAKE) -C seabios $(1) \
 		HOSTCC="$(HOST_CC)" \
 		CC="$(CC)" \
